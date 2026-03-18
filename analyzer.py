@@ -85,7 +85,7 @@ class Analyzer:
                                 "type": "image_url",
                                 "image_url": {
                                     "url": f"data:image/jpeg;base64,{screenshot_b64}",
-                                    "detail": "high",
+                                    "detail": "low",
                                 },
                             },
                             {"type": "text", "text": user_text},
