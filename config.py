@@ -13,31 +13,34 @@ OPENAI_MODEL = "gpt-4o-mini"
 # Capture
 CAPTURE_INTERVAL_SEC = 10
 SCREENSHOT_JPEG_QUALITY = 60
-SCREENSHOT_MAX_DIMENSION = 1024
+SCREENSHOT_MAX_DIMENSION = 1920
 
 # Hotkeys
-TOGGLE_HOTKEY = "ctrl+shift+x"      # Show / hide widgets
-LOCK_HOTKEY = "ctrl+shift+l"        # Lock / unlock drag mode
+TOGGLE_HOTKEY = "ctrl+shift+x"
+LOCK_HOTKEY = "ctrl+shift+l"
+SCOREBOARD_KEY = "tab"
 
-# Widget appearance
-WIDGET_WIDTH = 280
-WIDGET_OPACITY = 0.82
-WIDGET_CORNER_RADIUS = 14
-WIDGET_BG = (30, 30, 42)
-WIDGET_BORDER = (255, 255, 255, 25)
+# Widget appearance (Apple glass style)
+WIDGET_WIDTH = 320
+WIDGET_OPACITY = 0.78
+WIDGET_CORNER_RADIUS = 16
+WIDGET_BG = (25, 30, 52)           # Deep navy blue glass
+WIDGET_BORDER = (255, 255, 255, 15)
 
-# Default positions (right side, stacked with spacing)
+# Default positions (right column, stacked with breathing room)
 WIDGET_DEFAULTS = {
-    "lane":  {"x_offset": 20, "y": 120},
-    "macro": {"x_offset": 20, "y": 210},
-    "alert": {"x_offset": 20, "y": 300},
+    "lane":      {"x_offset": 16, "y": 60},
+    "macro":     {"x_offset": 16, "y": 172},
+    "matchup":   {"x_offset": 16, "y": 284},
+    "objective": {"x_offset": 16, "y": 396},
+    "alert":     {"x_offset": 16, "y": 508},
 }
 
 # Accent colors
 ACCENT = {
-    "safe": "#22c55e",
-    "caution": "#f59e0b",
-    "danger": "#ef4444",
+    "safe": "#34d399",
+    "caution": "#fbbf24",
+    "danger": "#f87171",
     "neutral": "#94a3b8",
     "info": "#818cf8",
 }

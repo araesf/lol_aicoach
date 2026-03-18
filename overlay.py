@@ -2,7 +2,7 @@ import json
 import os
 
 from PyQt5.QtCore import Qt, QPoint, QRectF
-from PyQt5.QtGui import QColor, QCursor, QPainter, QPainterPath, QPen
+from PyQt5.QtGui import QColor, QCursor, QLinearGradient, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import QApplication, QLabel, QHBoxLayout, QVBoxLayout, QWidget
 
 from config import (
@@ -20,13 +20,14 @@ from config import (
 
 _KW = {
     "danger":  ["all-in", "engage", "gank", "dive", "back off", "careful",
-                "incoming", "do not"],
+                "incoming", "do not", "don't fight", "avoid"],
     "caution": ["trade", "poke", "dragon", "baron", "recall", "missing",
-                "powerspike", "objective", "contest", "back now", "watch"],
+                "powerspike", "objective", "contest", "back now", "watch",
+                "respect", "caution"],
     "safe":    ["freeze", "safe", "farm", "clear", "scale", "patience",
-                "wait", "sit back"],
+                "wait", "sit back", "stay", "hold"],
     "info":    ["push", "rotate", "roam", "split", "group", "ward", "herald",
-                "pressure", "crash", "shove", "buy"],
+                "pressure", "crash", "shove", "buy", "build", "rush"],
 }
 
 
@@ -58,10 +59,29 @@ def _save_positions(pos: dict):
         print(f"[Overlay] Failed to save positions: {e}")
 
 
+# ── Icons ────────────────────────────────────────────────────────────────────
+
+_ICONS = {
+    "lane": "\u2694",       # Crossed swords
+    "macro": "\u2691",      # Flag
+    "matchup": "\u2696",    # Scales
+    "objective": "\u25C6",  # Diamond
+    "alert": "\u26A0",      # Warning triangle
+}
+
+_TITLES = {
+    "lane": "Lane",
+    "macro": "Macro",
+    "matchup": "Matchup",
+    "objective": "Objective",
+    "alert": "Alert",
+}
+
+
 # ── Widget ───────────────────────────────────────────────────────────────────
 
 class CoachWidget(QWidget):
-    """Small, frosted-glass, draggable coaching widget."""
+    """Apple glass-style frosted coaching widget."""
 
     def __init__(self, key: str):
         super().__init__()
@@ -97,44 +117,66 @@ class CoachWidget(QWidget):
 
     def _init_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(14, 10, 14, 10)
-        root.setSpacing(3)
+        root.setContentsMargins(18, 14, 18, 14)
+        root.setSpacing(6)
 
-        top = QHBoxLayout()
-        top.setSpacing(8)
+        # Header row: icon + title
+        header = QHBoxLayout()
+        header.setSpacing(7)
 
-        self._tag = QLabel(self.key.upper())
-        self._tag.setFixedHeight(18)
-        self._tag.setStyleSheet(self._tag_css(ACCENT["neutral"]))
-        top.addWidget(self._tag)
-
-        self._action_lbl = QLabel("")
-        self._action_lbl.setStyleSheet(
-            "color: white; font-size: 12px; font-weight: 600;"
-            " font-family: 'Segoe UI', sans-serif;"
+        icon = QLabel(_ICONS.get(self.key, ""))
+        icon.setStyleSheet(
+            "color: rgba(255,255,255,0.45); font-size: 12px;"
         )
-        self._action_lbl.setWordWrap(True)
-        top.addWidget(self._action_lbl, 1)
-        root.addLayout(top)
+        icon.setFixedWidth(16)
+        header.addWidget(icon)
 
+        title = QLabel(_TITLES.get(self.key, self.key.upper()))
+        title.setStyleSheet(
+            "color: rgba(255,255,255,0.45); font-size: 11px; font-weight: 500;"
+            " letter-spacing: 0.5px;"
+            " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
+        )
+        header.addWidget(title)
+        header.addStretch()
+
+        self._tag = QLabel("")
+        self._tag.setFixedHeight(20)
+        self._tag.setStyleSheet(self._tag_css(ACCENT["neutral"]))
+        header.addWidget(self._tag)
+
+        root.addLayout(header)
+
+        # Action text (main advice — larger, white, bold)
+        self._action_lbl = QLabel("")
+        self._action_lbl.setWordWrap(True)
+        self._action_lbl.setStyleSheet(
+            "color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 600;"
+            " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
+            " line-height: 1.3;"
+        )
+        root.addWidget(self._action_lbl)
+
+        # Reason text (context — smaller, muted)
         self._reason_lbl = QLabel("Waiting...")
         self._reason_lbl.setWordWrap(True)
         self._reason_lbl.setStyleSheet(
-            "color: rgba(255,255,255,0.65); font-size: 11px;"
-            " font-family: 'Segoe UI', sans-serif;"
+            "color: rgba(255,255,255,0.50); font-size: 12px; font-weight: 400;"
+            " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
+            " line-height: 1.3;"
         )
         root.addWidget(self._reason_lbl)
 
     @staticmethod
     def _tag_css(color: str) -> str:
         return (
-            f"background-color: {color}25; color: {color};"
-            f" border: 1px solid {color}40; border-radius: 4px;"
-            f" padding: 1px 6px; font-size: 9px; font-weight: 700;"
-            f" font-family: 'Segoe UI', sans-serif;"
+            f"background-color: {color}20; color: {color};"
+            f" border: 1px solid {color}30; border-radius: 5px;"
+            f" padding: 2px 8px; font-size: 10px; font-weight: 600;"
+            f" font-family: 'Segoe UI', 'SF Pro Display', sans-serif;"
         )
 
-    # ── Paint ────────────────────────────────────────────────────────────
+    # ── Paint (Apple glass effect) ───────────────────────────────────────
 
     def paintEvent(self, _event):
         p = QPainter(self)
@@ -142,13 +184,27 @@ class CoachWidget(QWidget):
         rect = QRectF(self.rect())
         r, g, b = WIDGET_BG
 
+        # Glass gradient — slightly lighter at top
         path = QPainterPath()
         path.addRoundedRect(rect, WIDGET_CORNER_RADIUS, WIDGET_CORNER_RADIUS)
-        p.fillPath(path, QColor(r, g, b, int(255 * WIDGET_OPACITY)))
 
+        grad = QLinearGradient(0, 0, 0, rect.height())
+        grad.setColorAt(0, QColor(r + 12, g + 12, b + 12, int(255 * WIDGET_OPACITY)))
+        grad.setColorAt(1, QColor(r, g, b, int(255 * (WIDGET_OPACITY + 0.05))))
+        p.fillPath(path, grad)
+
+        # Top highlight (subtle light edge like real glass)
+        highlight = QPainterPath()
+        highlight_rect = QRectF(rect.x() + 1, rect.y() + 1,
+                                rect.width() - 2, rect.height() * 0.45)
+        highlight.addRoundedRect(highlight_rect,
+                                 WIDGET_CORNER_RADIUS - 1, WIDGET_CORNER_RADIUS - 1)
+        p.fillPath(highlight, QColor(255, 255, 255, 8))
+
+        # Border
         br, bg_, bb, ba = WIDGET_BORDER
         if not self._locked:
-            p.setPen(QPen(QColor(129, 140, 248, 120), 1.5))
+            p.setPen(QPen(QColor(129, 140, 248, 100), 1.5))
         else:
             p.setPen(QPen(QColor(br, bg_, bb, ba), 1))
         p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5),
@@ -190,22 +246,23 @@ class CoachWidget(QWidget):
             return
         self._cur_action = action
         self._cur_reason = reason
+        accent = _color_for(action)
         self._action_lbl.setText(action)
         self._reason_lbl.setText(reason)
-        self._tag.setStyleSheet(self._tag_css(_color_for(action)))
+        self._tag.setStyleSheet(self._tag_css(accent))
+        self._tag.setText(self.key.upper())
         self.adjustSize()
         self.update()
 
 
 # ── Manager ──────────────────────────────────────────────────────────────────
 
+WIDGET_KEYS = ["lane", "macro", "matchup", "objective", "alert"]
+
+
 class OverlayManager:
     def __init__(self):
-        self._widgets = {
-            "lane":  CoachWidget("lane"),
-            "macro": CoachWidget("macro"),
-            "alert": CoachWidget("alert"),
-        }
+        self._widgets = {k: CoachWidget(k) for k in WIDGET_KEYS}
         self._visible = True
         self._locked = True
 
