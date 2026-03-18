@@ -141,29 +141,31 @@ class CoachWidget(QWidget):
 
     def _init_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 14, 18, 14)
-        root.setSpacing(6)
+        root.setContentsMargins(20, 16, 20, 16)
+        root.setSpacing(8)
 
         # Header row
         header = QHBoxLayout()
-        header.setSpacing(7)
+        header.setSpacing(6)
 
         icon = QLabel(_ICONS.get(self.key, ""))
-        icon.setStyleSheet("color: rgba(255,255,255,0.45); font-size: 12px;")
-        icon.setFixedWidth(16)
+        icon.setStyleSheet(
+            "color: rgba(255,255,255,0.35); font-size: 11px;"
+        )
+        icon.setFixedWidth(14)
         header.addWidget(icon)
 
         title = QLabel(_TITLES.get(self.key, self.key.upper()))
         title.setStyleSheet(
-            "color: rgba(255,255,255,0.45); font-size: 11px; font-weight: 500;"
-            " letter-spacing: 0.5px;"
-            " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
+            "color: rgba(255,255,255,0.35); font-size: 10px; font-weight: 500;"
+            " letter-spacing: 1.2px; text-transform: uppercase;"
+            " font-family: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', sans-serif;"
         )
         header.addWidget(title)
         header.addStretch()
 
         self._tag = QLabel("")
-        self._tag.setFixedHeight(20)
+        self._tag.setFixedHeight(18)
         self._tag.setStyleSheet(self._tag_css(ACCENT["neutral"]))
         header.addWidget(self._tag)
         root.addLayout(header)
@@ -172,13 +174,14 @@ class CoachWidget(QWidget):
         self._content = QWidget()
         self._content.setStyleSheet("background: transparent;")
         content_layout = QVBoxLayout(self._content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(4)
+        content_layout.setContentsMargins(0, 2, 0, 0)
+        content_layout.setSpacing(5)
 
         self._action_lbl = QLabel("")
         self._action_lbl.setWordWrap(True)
         self._action_lbl.setStyleSheet(
-            "color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 600;"
+            "color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 600;"
+            " letter-spacing: 0.2px;"
             " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
         )
         content_layout.addWidget(self._action_lbl)
@@ -186,12 +189,13 @@ class CoachWidget(QWidget):
         self._reason_lbl = QLabel("Waiting...")
         self._reason_lbl.setWordWrap(True)
         self._reason_lbl.setStyleSheet(
-            "color: rgba(255,255,255,0.50); font-size: 12px; font-weight: 400;"
-            " font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;"
+            "color: rgba(255,255,255,0.42); font-size: 11px; font-weight: 400;"
+            " letter-spacing: 0.1px;"
+            " font-family: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', sans-serif;"
         )
         content_layout.addWidget(self._reason_lbl)
 
-        # Attach opacity effect for fading
+        # Opacity effect for fade transitions
         opacity = QGraphicsOpacityEffect(self._content)
         opacity.setOpacity(1.0)
         self._content.setGraphicsEffect(opacity)
@@ -201,10 +205,11 @@ class CoachWidget(QWidget):
     @staticmethod
     def _tag_css(color: str) -> str:
         return (
-            f"background-color: {color}20; color: {color};"
-            f" border: 1px solid {color}30; border-radius: 5px;"
-            f" padding: 2px 8px; font-size: 10px; font-weight: 600;"
-            f" font-family: 'Segoe UI', 'SF Pro Display', sans-serif;"
+            f"background-color: {color}18; color: {color};"
+            f" border: 1px solid {color}25; border-radius: 4px;"
+            f" padding: 1px 7px; font-size: 9px; font-weight: 600;"
+            f" letter-spacing: 0.5px;"
+            f" font-family: 'Segoe UI', 'SF Pro Text', sans-serif;"
         )
 
     # ── Paint (Apple glass) ──────────────────────────────────────────────
@@ -214,29 +219,32 @@ class CoachWidget(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         rect = QRectF(self.rect())
         r, g, b = WIDGET_BG
+        radius = WIDGET_CORNER_RADIUS
 
-        path = QPainterPath()
-        path.addRoundedRect(rect, WIDGET_CORNER_RADIUS, WIDGET_CORNER_RADIUS)
+        # Main glass body — gradient from slightly lighter top to darker bottom
+        body = QPainterPath()
+        body.addRoundedRect(rect, radius, radius)
 
         grad = QLinearGradient(0, 0, 0, rect.height())
-        grad.setColorAt(0, QColor(r + 12, g + 12, b + 12, int(255 * WIDGET_OPACITY)))
-        grad.setColorAt(1, QColor(r, g, b, int(255 * (WIDGET_OPACITY + 0.05))))
-        p.fillPath(path, grad)
+        grad.setColorAt(0.0, QColor(r + 8, g + 8, b + 10, int(255 * WIDGET_OPACITY)))
+        grad.setColorAt(0.5, QColor(r + 3, g + 3, b + 5, int(255 * (WIDGET_OPACITY + 0.02))))
+        grad.setColorAt(1.0, QColor(r, g, b, int(255 * (WIDGET_OPACITY + 0.06))))
+        p.fillPath(body, grad)
 
-        highlight = QPainterPath()
-        highlight_rect = QRectF(rect.x() + 1, rect.y() + 1,
-                                rect.width() - 2, rect.height() * 0.45)
-        highlight.addRoundedRect(highlight_rect,
-                                 WIDGET_CORNER_RADIUS - 1, WIDGET_CORNER_RADIUS - 1)
-        p.fillPath(highlight, QColor(255, 255, 255, 8))
+        # Top inner glow — very subtle white wash
+        glow = QPainterPath()
+        glow_rect = QRectF(rect.x() + 1.5, rect.y() + 1.5,
+                           rect.width() - 3, rect.height() * 0.35)
+        glow.addRoundedRect(glow_rect, radius - 2, radius - 2)
+        p.fillPath(glow, QColor(255, 255, 255, 6))
 
+        # Border — barely there
         br, bg_, bb, ba = WIDGET_BORDER
         if not self._locked:
-            p.setPen(QPen(QColor(129, 140, 248, 100), 1.5))
+            p.setPen(QPen(QColor(165, 180, 252, 80), 1.0))  # Soft indigo in edit mode
         else:
-            p.setPen(QPen(QColor(br, bg_, bb, ba), 1))
-        p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5),
-                          WIDGET_CORNER_RADIUS, WIDGET_CORNER_RADIUS)
+            p.setPen(QPen(QColor(br, bg_, bb, ba), 0.5))
+        p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius)
 
     # ── Drag ─────────────────────────────────────────────────────────────
 
@@ -337,6 +345,19 @@ class OverlayManager:
         state = "locked" if self._locked else "unlocked — drag to reposition"
         print(f"[Overlay] Widgets {state}")
 
+    def _restack(self):
+        """Reposition widgets vertically so they never overlap."""
+        GAP = 10
+        screen = QApplication.primaryScreen().geometry()
+        saved = _load_positions()
+        y = 50
+        for key in WIDGET_KEYS:
+            w = self._widgets[key]
+            x = saved.get(key, {}).get("x",
+                screen.width() - WIDGET_WIDTH - WIDGET_DEFAULTS[key]["x_offset"])
+            w.move(x, y)
+            y += w.height() + GAP
+
     def update_from_analysis(self, result: dict):
         for key, widget in self._widgets.items():
             if key in result:
@@ -344,3 +365,4 @@ class OverlayManager:
                     result[key].get("action", "..."),
                     result[key].get("reason", ""),
                 )
+        self._restack()

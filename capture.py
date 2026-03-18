@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 import threading
 
 import mss
@@ -54,6 +55,14 @@ def capture_game_regions() -> dict[str, str]:
     hud_combined = Image.new("RGB", (hud_bottom.width, hud_top.height + hud_bottom.height))
     hud_combined.paste(hud_top.resize((hud_bottom.width, hud_top.height)), (0, 0))
     hud_combined.paste(hud_bottom, (0, hud_top.height))
+
+    if os.environ.get("DEBUG_CAPTURE"):
+        import pathlib
+        pathlib.Path("/tmp/lol_debug").mkdir(exist_ok=True)
+        main_crop.save("/tmp/lol_debug/main.jpg")
+        minimap_crop.save("/tmp/lol_debug/minimap.jpg")
+        hud_combined.save("/tmp/lol_debug/hud.jpg")
+        print("[Capture] Debug screenshots saved to /tmp/lol_debug/")
 
     return {
         "main": _img_to_b64(main_crop),

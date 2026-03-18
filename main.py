@@ -4,11 +4,11 @@ import time
 
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication
-import keyboard
+from pynput import keyboard
 
 from analyzer import Analyzer
 from capture import capture_game_regions, capture_scoreboard, regions_size_kb
-from config import CAPTURE_INTERVAL_SEC, TOGGLE_HOTKEY, LOCK_HOTKEY, SCOREBOARD_KEY
+from config import CAPTURE_INTERVAL_SEC
 from overlay import OverlayManager
 
 SCOREBOARD_COOLDOWN_SEC = 60
@@ -67,20 +67,22 @@ def main():
         import os
         if not os.environ.get("OPENAI_API_KEY"):
             print("[Error] OPENAI_API_KEY not set.")
-            print("  Set it with: set OPENAI_API_KEY=sk-your-key-here")
+            print("  Set it with: export OPENAI_API_KEY=sk-your-key-here")
             sys.exit(1)
 
     print("=" * 50)
     print("  League AI Coach")
     print("=" * 50)
     print(f"  Interval    : every {CAPTURE_INTERVAL_SEC}s")
-    print(f"  Show/Hide   : {TOGGLE_HOTKEY}")
-    print(f"  Lock/Unlock : {LOCK_HOTKEY}")
+    print(f"  Show/Hide   : Ctrl+Shift+X")
+    print(f"  Lock/Unlock : Ctrl+Shift+L")
     print(f"  Scoreboard  : Tab (once per {SCOREBOARD_COOLDOWN_SEC}s)")
     print(f"  Quit        : Ctrl+C")
     print("=" * 50)
 
     app = QApplication(sys.argv)
+    from PyQt5.QtGui import QFont
+    app.setFont(QFont("Helvetica Neue"))
     analyzer = Analyzer()
     overlay = OverlayManager()
     signal = _Signal()
@@ -89,16 +91,36 @@ def main():
     signal.toggle.connect(overlay.toggle)
     signal.toggle_lock.connect(overlay.toggle_lock)
 
-    keyboard.add_hotkey(TOGGLE_HOTKEY, lambda: signal.toggle.emit())
-    keyboard.add_hotkey(LOCK_HOTKEY, lambda: signal.toggle_lock.emit())
+    # ── Hotkeys via pynput (cross-platform) ──────────────────────────────
+    _pressed = set()
 
-    keyboard.on_press_key(
-        SCOREBOARD_KEY,
-        lambda _: threading.Thread(
-            target=_on_tab_press, args=(analyzer,), daemon=True
-        ).start(),
-        suppress=False,
-    )
+    def _on_press(key):
+        try:
+            _pressed.add(key)
+
+            # Tab → scoreboard capture
+            if key == keyboard.Key.tab:
+                threading.Thread(
+                    target=_on_tab_press, args=(analyzer,), daemon=True
+                ).start()
+
+            # Ctrl+Shift+X → toggle overlay
+            if (keyboard.Key.ctrl_l in _pressed or keyboard.Key.ctrl_r in _pressed) \
+                    and keyboard.Key.shift in _pressed:
+                if hasattr(key, 'char') and key.char == 'x':
+                    signal.toggle.emit()
+                elif hasattr(key, 'char') and key.char == 'l':
+                    signal.toggle_lock.emit()
+
+        except Exception:
+            pass
+
+    def _on_release(key):
+        _pressed.discard(key)
+
+    listener = keyboard.Listener(on_press=_on_press, on_release=_on_release)
+    listener.daemon = True
+    listener.start()
 
     overlay.show()
     print("[Coach] Overlay visible. Press Tab in-game to capture scoreboard.")
@@ -115,7 +137,7 @@ def main():
     finally:
         print("\n[Coach] Shutting down...")
         stop.set()
-        keyboard.unhook_all()
+        listener.stop()
         thread.join(timeout=5)
         cost = analyzer.get_cost_estimate()
         print(f"[Coach] {analyzer.call_count} calls | "
